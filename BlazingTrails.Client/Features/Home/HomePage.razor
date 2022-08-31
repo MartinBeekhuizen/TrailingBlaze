@@ -1,0 +1,39 @@
+﻿@page "/"
+@inject HttpClient httpClient
+
+<PageTitle>Blazing Trails</PageTitle>
+
+<h3>Homepage</h3>
+
+@if (_trails == null)
+{
+    <p>Loading trails...</p>
+}
+else
+{
+    <div class="grid">
+        @foreach (var trail in _trails)
+        {
+           <TrailCard Trail="trail"/>
+        }
+    </div>
+}
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+
+        try
+        {
+            _trails = await httpClient.GetFromJsonAsync<IEnumerable<Trail>>("trails/trail-data.json");
+        }
+        catch (HttpRequestException)
+        {
+            Console.WriteLine("Some exception got thrown while requesting the resources.");
+        }
+        base.OnInitialized();
+    }
+
+
+    private IEnumerable<Trail>? _trails;
+}
