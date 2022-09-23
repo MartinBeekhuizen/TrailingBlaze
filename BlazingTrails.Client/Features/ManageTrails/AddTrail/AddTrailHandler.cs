@@ -1,10 +1,10 @@
-﻿using BlazingTrails.Shared.Features.ManageTrails;
+﻿using BlazingTrails.Shared.Features.ManageTrails.AddTrail;
 
 using MediatR;
 
 using System.Net.Http.Json;
 
-namespace BlazingTrails.Client.Features.ManageTrails
+namespace BlazingTrails.Client.Features.ManageTrails.AddTrail
 {
     public class AddTrailHandler : IRequestHandler<AddTrailRequest, AddTrailRequest.Response>
     {
@@ -20,7 +20,7 @@ namespace BlazingTrails.Client.Features.ManageTrails
         {
             var response = await _httpClient.PostAsJsonAsync(AddTrailRequest.RouteTemplate, request, cancellationToken);
 
-            if(response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode)
             {
                 var trailId = await response.Content.ReadFromJsonAsync<int>(cancellationToken: cancellationToken);
                 return new AddTrailRequest.Response(trailId);

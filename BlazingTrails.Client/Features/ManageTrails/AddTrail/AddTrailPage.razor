@@ -1,0 +1,77 @@
+﻿@page "/add-trail"
+@using BlazingTrails.Shared.Features.ManageTrails.AddTrail
+@using BlazingTrails.Shared.Features.ManageTrails.Shared
+@inject IMediator Mediator
+
+<PageTitle>Add Trail - Blazing Trails</PageTitle>
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">Home</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Add Trail</li>
+    </ol>
+</nav>
+
+<h3 class="mt-5 mb-4">Add a trail</h3>
+
+@if (_submitSuccesfull)
+{
+    <SuccessAlert Message="Your trail has been added succesfully."></SuccessAlert>
+}
+else if (_errorMessage is not null)
+{
+   <ErrorAlert ErrorMessage="@_errorMessage"></ErrorAlert>
+}
+<TrailForm @ref="_trailForm" OnSubmit="SubmitNewTrail" />
+
+@code {
+
+    private bool _submitSuccesfull { get; set; }
+
+    private string? _errorMessage;
+
+    private TrailForm _trailForm = default!;
+
+    private async Task SubmitNewTrail(TrailDto trail, IBrowserFile? image)
+    {
+        var response = await Mediator.Send(new AddTrailRequest(trail));
+
+        if(response.trailId == -1)
+        {
+            _submitSuccesfull = false;
+            _errorMessage = "There was a problem saving your trail";
+            StateHasChanged();
+            return;
+        }
+
+        if(image == null)
+        {
+            _submitSuccesfull = true;
+            _trailForm.ResetForm();
+            StateHasChanged();
+            return;
+        }
+
+        _submitSuccesfull = await ProcessImage(response.trailId, image);
+
+        if(_submitSuccesfull)
+        {
+            _trailForm.ResetForm();
+        }
+    }
+
+    private async Task<bool> ProcessImage(int trailId, IBrowserFile trailImage)
+    {
+        var imageUploadResponse = await Mediator.Send(new UploadTrailImageRequest(trailId, trailImage));
+
+        if(string.IsNullOrWhiteSpace(imageUploadResponse.ImageName))
+        {
+            _errorMessage = "Your trail was saved, but there was a problem uploading the image";
+
+            return false;
+        }
+
+        return true;
+    }
+
+}

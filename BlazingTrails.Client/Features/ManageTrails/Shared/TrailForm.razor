@@ -1,17 +1,8 @@
-﻿@page "/add-trail"
-@inject IMediator Mediator
+﻿@using BlazingTrails.Client.Validation
+@using BlazingTrails.Shared.Features.ManageTrails.Shared
 
-<PageTitle>Add Trail - Blazing Trails</PageTitle>
 
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="/">Home</a></li>
-        <li class="breadcrumb-item active" aria-current="page">Add Trail</li>
-    </ol>
-</nav>
-
-<h3 class="mt-5 mb-4">Add a trail</h3>
-<EditForm Model="_trail" OnValidSubmit="SubmitForm">
+<EditForm EditContext="_editContext" OnValidSubmit="SubmitForm">
     <FluentValidationValidator />
 
     <FormSection Title="Basic Details" HelpText="This information is used to identiy the trail and can be searched to help hikers find it.">
@@ -20,6 +11,8 @@
             <InputText @bind-Value="_trail.Name" class="form-control" id="trailName" />
             <ValidationMessage For="(() => _trail.Name)" />
         </FormFieldSet>
+
+
         <FormFieldSet Width="col-6">
             <label for="trailDescription" class="font-weight-bold text-secondary">Description</label>
             <InputText @bind-Value="_trail.Description" class="form-control" id="trailDescription" />
@@ -37,6 +30,32 @@
             <InputNumber @bind-Value="_trail.Length" class="form-control" id="trailLength" />
             <ValidationMessage For="(() => _trail.Length)" />
         </FormFieldSet>
+
+        <FormFieldSet Width="col-5">
+            <label for="trailTime" class="font-weight-bold text-secondary">
+                <InputTime @bind-Value="_trail.TimeInMinutes" id="trailTime"></InputTime>
+                <ValidationMessage For="(() => _trail.TimeInMinutes)" />
+            </label>
+        </FormFieldSet>
+
+        <FormFieldSet Width="col-6">
+            <label for="trailImage" class="font-weight-bold text-secondary">Image</label>
+            @if (string.IsNullOrWhiteSpace(_trail.Image))
+            {
+                <InputFile OnChange="LoadTrailImage" class="form-control-file" id="trailImage" accept=".png,.jpg,.jpeg" />
+            }
+            else
+            {
+                <div class="card bg-dark text-white">
+                    <img src="images/@_trail.Image" />
+                    <div class="card-img-overlay">
+                        <button class="btn btn-primary btn-sm" @onclick="RemoveTrailImage">Remove</button>
+                    </div>
+                </div>
+            }
+
+        </FormFieldSet>
+
     </FormSection>
 
     <FormSection Title="Route Instructions" HelpText="Route instructions are a guide for the trail. This helps hikers new to the trail stay on track">
@@ -59,7 +78,7 @@
                     <div class="form-group">
                         <label for="routeInstructionDescription" class="font-weight-bold text-secondary">Description</label>
                         <InputText @bind-Value="instruction.Description" class="form-control" id="routeInstructionDescription" />
-                        <ValidationMessage For="(() => instruction.Description)"/>
+                        <ValidationMessage For="(() => instruction.Description)" />
                     </div>
                 </div>
                 <div class="col-1 d-flex mt-3">
@@ -94,23 +113,61 @@
 
 @code {
     private TrailDto _trail = new TrailDto();
+    private IBrowserFile? _trailImage;
+    private EditContext _editContext = default!;
 
-    private bool _submitSuccesful { get; set; }
+    [Parameter]
+    public Func<TrailDto, IBrowserFile?, Task> OnSubmit { get; set; }
 
-    private string? _errorMessage;
+    [Parameter]
+    public TrailDto? Trail { get; set; }
 
-    private async Task SubmitForm()
+    protected override void OnParametersSet()
     {
-        var response = await Mediator.Send(new AddTrailRequest(_trail));
+        _editContext = new EditContext(_trail);
+        _editContext.SetFieldCssClassProvider(new BootstrapCssClassProvider());
 
-        if(response.trailId == -1)
+        if (Trail != null)
         {
-            _errorMessage = "Saving your trail did not succeed.";
-            _submitSuccesful = false;
-            return;
+            _trail.Id = Trail.Id;
+            _trail.Name = Trail.Name;
+            _trail.Description = Trail.Description;
+            _trail.Location = Trail.Location;
+            _trail.Image = Trail.Image;
+            _trail.ImageAction = ImageAction.None;
+            _trail.Length = Trail.Length;
+            _trail.TimeInMinutes = Trail.TimeInMinutes;
+            _trail.Route.Clear();
+            _trail.Route.AddRange(Trail.Route.Select(ri => new TrailDto.RouteInstruction
+                {
+                    Stage = ri.Stage,
+                    Description = ri.Description
+                }));
         }
-        _trail = new TrailDto();
-        _errorMessage = null;
-        _submitSuccesful = true;
     }
+
+    public void ResetForm()
+    {
+        _trail = new TrailDto();
+        _editContext = new EditContext(_trail);
+        _editContext.SetFieldCssClassProvider(new BootstrapCssClassProvider());
+        _trailImage = null;
+    }
+
+    private void LoadTrailImage(InputFileChangeEventArgs e)
+    {
+
+        _trailImage = e.File;
+        _trail.ImageAction = ImageAction.Add;
+    }
+
+    private void RemoveTrailImage()
+    {
+        _trail.Image = null;
+        _trail.ImageAction = ImageAction.Remove;
+    }
+
+    private async Task SubmitForm() => await OnSubmit(_trail, _trailImage);
+
+
 }

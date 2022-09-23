@@ -3,6 +3,7 @@ using BlazingTrails.Api.Persistence;
 using FluentValidation.AspNetCore;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 
 using System.Reflection;
 
@@ -17,6 +18,11 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
+    app.UseStaticFiles(new StaticFileOptions()
+    {
+        FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory())),
+        RequestPath = new Microsoft.AspNetCore.Http.PathString("/Images")
+    });
 }
 app.UseHttpsRedirection();
 app.UseBlazorFrameworkFiles();
