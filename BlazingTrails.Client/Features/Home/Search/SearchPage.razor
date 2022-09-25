@@ -1,7 +1,7 @@
 ﻿@page "/search/{SearchTerm}"
 @page "/search/{SearchTerm}/maxLength/{MaxLength:int}"
 
-@inject HttpClient _httpClient;
+@inject Mediator Mediator;
 @inject NavigationManager _navManager;
 
 <nav aria-label="breadcrumb">
@@ -49,18 +49,30 @@ else
     {
         try
         {
-            var allTrails = await _httpClient.GetFromJsonAsync<IEnumerable<Trail>>("trails/trail-data.json");
+            var response = await Mediator.Send(new GetTrailsRequest());
+            var allTrails = response.Trails.Select(x => new Trail
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Image = x.Image,
+                Description = x.Description,
+                Location = x.Location,
+                Length = x.Length,
+                TimeInMinutes = x.TimeInMinutes
+            });
+ 
             _searchResults = allTrails!.Where(x => x.Name.Contains(SearchTerm, StringComparison.CurrentCultureIgnoreCase)
                                                 || x.Location.Contains(SearchTerm, StringComparison.CurrentCultureIgnoreCase));
 
             _cachedSearchResults = _searchResults;
 
-            Console.WriteLine(_searchResults);
+            
         }
         catch (HttpRequestException ex)
         {
             Console.WriteLine($"There was a problem loading trail data: {ex.Message}");
         }
+
         await base.OnInitializedAsync();
     }
 
